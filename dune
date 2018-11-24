@@ -1,0 +1,3 @@
+(executable
+  (name      week_focus)
+	(libraries base core stdio re))
