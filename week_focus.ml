@@ -5,17 +5,34 @@ open Stdio
 
 let filename = "/Users/vincent/Dropbox/wiki/2018_november_strategy.md" 
 
+type day = 
+  | Monday
+  | Tuesday
+  | Wednesday
+  | Thursday
+  | Friday
+  | Saturday
+  | Sunday
+
 type tag = {
   label: string;
   days: day list;
-} and day = 
-    | Monday
-    | Tuesday
-    | Wednesday
-    | Thursday
-    | Friday
-    | Saturday
-    | Sunday
+} [@@deriving fields]
+
+type day_summary = {
+  day: day;
+  items: string list;
+}
+
+
+let string_of_day = function
+  | Monday  -> "Monday"
+  | Tuesday -> "Tuesday"
+  | Wednesday -> "Wednesday"
+  | Thursday -> "Thursday"
+  | Friday -> "Friday"
+  | Saturday -> "Saturday"
+  | Sunday -> "Sunday"
 
 let to_day = function
   | 1 -> Monday
@@ -30,11 +47,8 @@ let is_checked cell =
   String.equal cell "x"
 
 let get_day row day_number =
-  let cell_content = String.strip (Re.Group.get row (day_number+1)) in
-  if  is_checked cell_content then 
-    [to_day day_number] 
-  else 
-    []
+  let cell_content = String.strip (Re.Group.get row (day_number + 1)) in
+  if  is_checked cell_content then [to_day day_number] else []
 
 let get_tag line = 
   let label_re = 
@@ -43,24 +57,16 @@ let get_tag line =
   match Re.exec_opt label_re line with
   | Some row -> 
     let days = 
-      List.range 1 7 
-      |> List.bind ~f:(fun day_number -> get_day row day_number )
+      List.range ~stop:`inclusive 1 7 
+      |> List.bind ~f:(fun day_number -> 
+          get_day row day_number )
     in
     if List.is_empty days then None
-    else Some { label = (Re.Group.get row 1); days = days }
+    else Some { label = (Re.Group.get row 1) |> String.strip; days = days }
 
   | None -> None
 
 let print_tag tag = 
-  let string_of_day = function
-    | Monday  -> "Monday"
-    | Tuesday -> "Tuesday"
-    | Wednesday -> "Wednesday"
-    | Thursday -> "Thursday"
-    | Friday -> "Friday"
-    | Saturday -> "Saturday"
-    | Sunday -> "Sunday" in
-
   let days = 
     List.map ~f:string_of_day tag.days
     |> String.concat ~sep:"," 
@@ -78,7 +84,56 @@ let get_tags filename =
       | Some tag -> tag::acc
       | None -> acc)
 
+let get_day_summary tags day =
+  let keep_tag day tag =
+    tag.days
+    |> List.filter ~f:(fun d -> phys_equal d day)
+    |> List.is_empty |> not
+  in
+
+  let items = 
+    tags
+    |> List.filter ~f:(keep_tag day)
+    |> List.map ~f:(fun item -> item.label)
+  in
+  { day = day; items = items}
+
+let print_summary {day; items} =
+  let day_str = string_of_day day in
+  let line = List.range 0 (String.length day_str)
+             |> List.map ~f:(fun _ -> "-") |> String.concat
+  in
+  printf "%s\n%s\n" day_str line;
+  List.iter items ~f:(fun item -> printf "%s\n" item);
+  printf "\n"
+
+
+let print_snippet day_summary =
+  let {day; items} = day_summary in
+  let snippet_name =
+    match day with
+    | Monday  -> "focuslun"
+    | Tuesday -> "focusmar"
+    | Wednesday -> "focusmer"
+    | Thursday -> "focusjeu"
+    | Friday -> "focusven"
+    | Saturday -> "focussam"
+    | Sunday -> "focusdim" 
+  in
+  printf "snippet %s\n" snippet_name;
+  List.iter ~f:(printf "- [ ] %s\n") items;
+  printf "endsnippet\n"
+
+let print ~strategy  tags =
+  List.range ~stop:`inclusive 1 7 
+  |> List.iter ~f:(fun  day_no -> 
+      let summary = get_day_summary tags (to_day day_no) in
+      match strategy with
+      | `snippets -> print_snippet summary
+      | `summary -> print_summary summary)
+
 let () = 
   let tags = get_tags filename in 
-  List.iter ~f:print_tag tags
+  print ~strategy:`snippets tags
+(* List.iter ~f:print_tag tags *)
 
