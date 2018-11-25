@@ -5,6 +5,8 @@ open Stdio
 
 let filename = "/Users/vincent/Dropbox/wiki/2018_november_strategy.md" 
 
+let snippets_filename = "/Users/vincent/dotfiles/vim/snippets/all/var.snippets" 
+
 type day = 
   | Monday
   | Tuesday
@@ -23,7 +25,6 @@ type day_summary = {
   day: day;
   items: string list;
 }
-
 
 let string_of_day = function
   | Monday  -> "Monday"
@@ -107,8 +108,7 @@ let print_summary {day; items} =
   List.iter items ~f:(fun item -> printf "%s\n" item);
   printf "\n"
 
-
-let print_snippet day_summary =
+let print_snippet outc day_summary =
   let {day; items} = day_summary in
   let snippet_name =
     match day with
@@ -120,17 +120,21 @@ let print_snippet day_summary =
     | Saturday -> "focussam"
     | Sunday -> "focusdim" 
   in
-  printf "snippet %s\n" snippet_name;
-  List.iter ~f:(printf "- [ ] %s\n") items;
-  printf "endsnippet\n"
+  Out_channel.fprintf outc "snippet %s\n" snippet_name;
+  List.iter ~f:(Out_channel.fprintf outc "- [ ] %s\n") items;
+  Out_channel.fprintf outc "endsnippet\n"
 
 let print ~strategy  tags =
-  List.range ~stop:`inclusive 1 7 
-  |> List.iter ~f:(fun  day_no -> 
-      let summary = get_day_summary tags (to_day day_no) in
-      match strategy with
-      | `snippets -> print_snippet summary
-      | `summary -> print_summary summary)
+  let outc = Out_channel.create snippets_filename in
+  Exn.protect ~f:(fun () ->  
+      List.range ~stop:`inclusive 1 7 
+      |> List.iter ~f:(fun  day_no -> 
+          let summary = get_day_summary tags (to_day day_no) in
+          match strategy with
+          | `snippets -> print_snippet outc summary
+          | `summary -> print_summary summary)
+    )
+    ~finally:(fun () -> Out_channel.close outc)
 
 let () = 
   let tags = get_tags filename in 
