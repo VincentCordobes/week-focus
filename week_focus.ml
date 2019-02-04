@@ -3,7 +3,7 @@ open Stdio
 
 (* let (<<) f g x = f(g(x));; *)
 
-let filename = "/Users/vincent/Dropbox/wiki/2018_november_strategy.md" 
+let filename = "/Users/vincent/Dropbox/wiki/2019_february_strategy.md" 
 let snippets_filename = "/Users/vincent/dotfiles/vim/snippets/all/var.snippets" 
 
 module Day  = struct 
@@ -84,7 +84,7 @@ let get_tags filename =
   lines 
   |> List.fold ~init: [] ~f:(fun acc line -> 
       match get_tag line with
-      | Some tag -> tag::acc
+      | Some tag -> acc @ [tag]
       | None -> acc)
 
 let get_day_summary tags day =
@@ -130,7 +130,7 @@ let print ~strategy  tags =
   let outc = Out_channel.create snippets_filename in
   Exn.protect ~f:(fun () ->  
       List.range ~stop:`inclusive 1 7 
-      |> List.iter ~f:(fun  day_no -> 
+      |> List.iter ~f:(fun day_no -> 
           let summary = get_day_summary tags (Day.create day_no) in
           match strategy with
           | `snippets -> print_snippet outc summary
@@ -140,6 +140,6 @@ let print ~strategy  tags =
 
 let () = 
   let tags = get_tags filename in 
-  print ~strategy:`summary tags
+  print ~strategy:`snippets tags
 (* List.iter ~f:print_tag tags *)
 
