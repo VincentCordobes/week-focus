@@ -23,7 +23,7 @@ module Day  = struct
     | 4 -> Thursday
     | 5 -> Friday
     | 6 -> Saturday
-    | 7 -> Saturday
+    | 7 -> Sunday
     | _ -> failwith "a day of the week should be in range [1, 7]"
 
   let to_string = function
@@ -126,8 +126,15 @@ let print_snippet outc day_summary =
   List.iter ~f:(Out_channel.fprintf outc "- [ ] %s\n") items;
   Out_channel.fprintf outc "endsnippet\n"
 
+let when_snippets strategy ~f=
+  match strategy with 
+  | `snippets -> f ()
+  | `summary -> ()
+
 let print ~strategy  tags =
   let outc = Out_channel.create snippets_filename in
+
+  when_snippets strategy ~f:(fun () -> printf "Generating snippets to:\n  - %s\n" snippets_filename);
   Exn.protect ~f:(fun () ->  
       List.range ~stop:`inclusive 1 7 
       |> List.iter ~f:(fun day_no -> 
@@ -136,7 +143,9 @@ let print ~strategy  tags =
           | `snippets -> print_snippet outc summary
           | `summary -> print_summary summary)
     )
-    ~finally:(fun () -> Out_channel.close outc)
+    ~finally:(fun () -> Out_channel.close outc);
+  when_snippets strategy ~f:(fun () -> printf "✨ Done\n")
+
 
 let () = 
   let tags = get_tags filename in 
