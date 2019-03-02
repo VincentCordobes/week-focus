@@ -1,9 +1,9 @@
 open Base
 open Stdio
 
-(* let (<<) f g x = f(g(x));; *)
+let (<<) f g x = f(g(x));;
 
-let filename = "/Users/vincent/Dropbox/wiki/2019_february_strategy.md" 
+let filename = "/Users/vincent/Dropbox/wiki/2019_march_strategy.md" 
 let snippets_filename = "/Users/vincent/dotfiles/vim/snippets/all/var.snippets" 
 
 module Day  = struct 
@@ -17,14 +17,14 @@ module Day  = struct
     | Sunday
 
   let create = function
+    | 0 -> Sunday
     | 1 -> Monday
     | 2 -> Tuesday
     | 3 -> Wednesday
     | 4 -> Thursday
     | 5 -> Friday
     | 6 -> Saturday
-    | 7 -> Sunday
-    | _ -> failwith "a day of the week should be in range [1, 7]"
+    | _ -> failwith "a day of the week should be in range [0, 6]"
 
   let to_string = function
     | Monday  -> "Monday"
@@ -50,20 +50,31 @@ type day_summary = {
 let is_checked cell =
   String.equal cell "x"
 
+(** 
+   Get days that are checked 
+   Eg. return [Monday; Wednesday] when
+   |       | Mon. | Tue. | Wed. 
+   |-------|------|------|------
+   | task1 | x    |      | x    
+*)
 let get_day row day_number =
-  let cell_content = String.strip (Re.Group.get row (day_number + 1)) in
+  (* 0 → 8, 1 → 2, ... 6 → 7 *)
+  let group_index = 
+    ((day_number + 6) % 7) + 2 
+  in
+  let cell_content = String.strip (Re.Group.get row group_index) in
   if  is_checked cell_content then [Day.create day_number] else []
 
 let get_tag line = 
   let label_re = 
     "\\|(.*?)\\|(.*?)\\|(.*?)\\|(.*?)\\|(.*?)\\|(.*?)\\|(.*?)\\|(.*?)\\|" 
-    |> Re.Pcre.re |> Re.compile in
+    |> Re.Pcre.re |> Re.compile 
+  in
   match Re.exec_opt label_re line with
   | Some row -> 
     let days = 
-      List.range ~stop:`inclusive 1 7 
-      |> List.bind ~f:(fun day_number -> 
-          get_day row day_number )
+      List.range ~stop:`inclusive 0 6 
+      |> List.bind ~f:(get_day row)
     in
     if List.is_empty days then None
     else Some { label = (Re.Group.get row 1) |> String.strip; days = days }
@@ -110,6 +121,17 @@ let print_summary {day; items} =
   List.iter items ~f:(fun item -> printf "%s\n" item);
   printf "\n"
 
+let print_items_of_the_day () =
+  let tags = get_tags filename in 
+  let now = Unix.time () 
+            |> Unix.localtime 
+  in
+  let week_day = now.tm_wday in
+  let {day;items} = get_day_summary tags (Day.create week_day) in
+  printf "%s focus\n" (Day.to_string day);
+  List.iter ~f:(printf "- [ ] %s\n") items
+
+
 let print_snippet outc day_summary =
   let {day; items} = day_summary in
   let snippet_name =
@@ -136,7 +158,7 @@ let print ~strategy  tags =
 
   when_snippets strategy ~f:(fun () -> printf "Generating snippets to:\n  - %s\n" snippets_filename);
   Exn.protect ~f:(fun () ->  
-      List.range ~stop:`inclusive 1 7 
+      List.range ~stop:`inclusive 0 6 
       |> List.iter ~f:(fun day_no -> 
           let summary = get_day_summary tags (Day.create day_no) in
           match strategy with
@@ -148,7 +170,8 @@ let print ~strategy  tags =
 
 
 let () = 
-  let tags = get_tags filename in 
-  print ~strategy:`snippets tags
+  (* let tags = get_tags filename in 
+     print ~strategy:`snippets tags *)
+  print_items_of_the_day ()
 (* List.iter ~f:print_tag tags *)
 
