@@ -3,7 +3,7 @@ open Stdio
 
 let (<<) f g x = f(g(x));;
 
-let filename = "/Users/vincent/Dropbox/wiki/2019_march_strategy.md" 
+let filename = "/Users/vincent/Dropbox/wiki/2019_april_strategy.md" 
 let snippets_filename = "/Users/vincent/dotfiles/vim/snippets/all/var.snippets" 
 
 module Day  = struct 
